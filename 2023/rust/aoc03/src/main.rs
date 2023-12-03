@@ -27,6 +27,7 @@ fn check_board_for_number(row: usize, col: usize, board: &mut Vec<Vec<char>>) ->
 
 fn main() {
     let mut total = 0;
+    let mut total_part_2 = 0;
 
     let mut board: Vec<Vec<char>> = Vec::new();
 
@@ -39,21 +40,39 @@ fn main() {
 
     for (row, line) in board.clone().iter().enumerate() {
         for (col, cell_value) in line.iter().enumerate() {
+            let mut is_gear = false;
+            let mut adjacent_engine_parts: Vec<u32> = Vec::new();
+
             if *cell_value != '.' && !cell_value.is_numeric() {
+
+                if *cell_value == '*' {
+                    is_gear = true;
+                }
+
+                let mut cloned_board = board.clone();
                 println!("Symbol '{}' at position ({}, {})", cell_value, row, col);
                 for cursor_row in (row as i32 - 1)..=(row as i32 + 1) {
                     for cursor_col in (col as i32 - 1)..=(col as i32 + 1) {
                         println!("Looking for ({},{})", cursor_row, cursor_col);
                         if cursor_col >= 0 && cursor_col < width as i32 && cursor_row >= 0 && cursor_row < height as i32 {
-                            let part_number: u32 = check_board_for_number(cursor_row.try_into().unwrap(), cursor_col.try_into().unwrap(), &mut board);
+                            let part_number: u32 = check_board_for_number(cursor_row.try_into().unwrap(), cursor_col.try_into().unwrap(), &mut cloned_board);
+                            if part_number != 0 {
+                                adjacent_engine_parts.push(part_number);
+                            }
                             println!("Adding {}", part_number);
                             total += part_number;
                         }
                     }
+                }
+
+                println!("{}", adjacent_engine_parts.len());
+                if is_gear && adjacent_engine_parts.len() == 2 {
+                    total_part_2 += adjacent_engine_parts.iter().fold(1, |a, b| a * b);
                 }
             }
         }
     }
 
     println!("Total part 1: {}", total);
+    println!("Total part 2: {}", total_part_2);
 }

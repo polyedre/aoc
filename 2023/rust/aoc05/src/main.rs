@@ -23,13 +23,16 @@ fn main() {
 
     let line = all_lines.next().unwrap().unwrap();
 
-    let seeds: Vec<u64> = line.split(':')
-                              .last()
-                              .unwrap()
-                              .trim()
-                              .split_whitespace()
-                              .map(|seed| seed.parse().unwrap())
-                              .collect();
+    let mut seed_elements = line.split(':').last().unwrap().trim().split_whitespace();
+    let seeds: Vec<u64> = seed_elements.clone().map(|seed| seed.parse().unwrap()).collect();
+    let mut seeds_part_2: Vec<(u64, u64)> = Vec::new();
+
+    loop {
+        match &seed_elements.next() {
+            Some(seed_id) => { seeds_part_2.push((seed_id.parse().unwrap(), seed_elements.next().unwrap().parse().unwrap())); },
+            None => break
+        }
+    }
 
     let mut current_associations = Vec::new();
 
@@ -51,6 +54,8 @@ fn main() {
 
     mapping.push(current_associations.clone());
 
+    // Part 1
+
     let mut locations = Vec::new();
 
     for seed in seeds {
@@ -70,5 +75,29 @@ fn main() {
         locations.push(element_number);
     }
 
+    // Part 2
+
+    let mut min_location: u64 = u64::MAX;
+
+    for (seed_start, length) in seeds_part_2 {
+
+        for seed in seed_start..(seed_start + length) {
+            let mut element_number = seed;
+
+            'outer: for associations in &mapping {
+                for association in associations {
+                match association.find_association(element_number) {
+                    Some(value) => { element_number = value; continue 'outer; },
+                    None => {}
+                }
+                }
+            }
+
+            min_location = u64::min(min_location, element_number);
+        }
+
+    }
+
     println!("Solution of part 1: {}", locations.iter().min().unwrap());
+    println!("Solution of part 2: {}", min_location);
 }

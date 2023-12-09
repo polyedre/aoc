@@ -5,6 +5,8 @@ use strum_macros::EnumString;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, EnumString)]
 enum Card {
+    #[strum(serialize = "J")]
+    Jack,
     #[strum(serialize = "2")]
     Two,
     #[strum(serialize = "3")]
@@ -23,8 +25,6 @@ enum Card {
     Nine,
     #[strum(serialize = "T")]
     Ten,
-    #[strum(serialize = "J")]
-    Jack,
     #[strum(serialize = "Q")]
     Queen,
     #[strum(serialize = "K")]
@@ -63,7 +63,18 @@ impl Hand {
             }
         }
 
-        let counts: Vec<u32> = counts_by_card.into_values().sorted().rev().collect();
+        let mut jocker_value = 0;
+        if let Some(value) = counts_by_card.get(&'J') {
+            println!("Found Jocker !");
+            jocker_value = *value;
+            counts_by_card.remove(&'J');
+        }
+
+        let mut counts: Vec<u32> = counts_by_card.into_values().sorted().rev().collect();
+        if counts.is_empty() {
+            counts.push(0);
+        }
+        counts[0] += jocker_value;
 
         let category = match counts.as_slice() {
             [5] => HandType::FiveOfAKind,
@@ -123,7 +134,9 @@ fn main() {
 
         let [cards, bid]: [&str; 2] = line.split_whitespace().collect::<Vec<&str>>().try_into().unwrap();
 
-        hands.push(Hand::new(cards.to_string(), bid.parse().unwrap()))
+        let hand = Hand::new(cards.to_string(), bid.parse().unwrap());
+        println!("{}", hand);
+        hands.push(hand)
     }
 
     hands.sort();

@@ -1,62 +1,57 @@
 use std::io;
 
-struct Galaxy {
-    col: u32,
-    row: u32
-}
-
 fn main() {
+    let universe: Vec<String> = io::stdin().lines().map(|line| line.unwrap()).collect();
 
-    let mut universe: Vec<String> = io::stdin().lines().map(|line| line.unwrap()).collect();
+    let height = universe.len();
+    let width = universe[0].len();
 
-    let mut height = universe.len();
-    let mut width = universe[0].len();
+    for (part, expansion_constant) in vec![1, 999999].iter().enumerate() {
 
-    // Expansion
+        let mut galaxies: Vec<(usize, usize)> = Vec::new();
 
-    let mut current_row = 0;
-    while current_row < height {
-        if !universe[current_row].contains("#") {
-            universe.insert(current_row, universe[current_row].clone());
-            current_row += 1;
-            height += 1;
-        }
-
-        current_row += 1;
-    }
-
-    let mut current_col = 0;
-    while current_col < width {
-        if (0..height).all(|row| universe[row].chars().nth(current_col).unwrap() == '.') {
-            for row_id in 0..height {
-                universe[row_id].insert(current_col, '.');
-            }
-            current_col += 1;
-            width += 1;
-        }
-
-        current_col += 1;
-    }
-
-    let mut galaxies: Vec<(usize, usize)> = Vec::new();
-
-    for row in 0..height {
-        for col in 0..width {
-            if universe[row].chars().nth(col).unwrap() == '#' {
-                galaxies.push((row, col));
+        for row in 0..height {
+            for col in 0..width {
+                if universe[row].chars().nth(col).unwrap() == '#' {
+                    galaxies.push((row, col));
+                }
             }
         }
-    }
 
-    let mut sum_distance = 0;
-    for start_galaxy_id in 0..galaxies.len() {
-        for dst_galaxy_id in (start_galaxy_id + 1)..galaxies.len() {
-            let (start_row, start_col) = galaxies[start_galaxy_id];
-            let (dst_row, dst_col) = galaxies[dst_galaxy_id];
+        // Expansion
 
-            sum_distance += i32::abs_diff(start_row as i32, dst_row as i32) + i32::abs_diff(start_col as i32, dst_col as i32);
+        let mut expanded_galaxies = galaxies.clone();
+
+        for (id, row) in universe.iter().enumerate() {
+            if !row.contains("#") {
+                for (galaxy_id, (galaxy_row, _)) in galaxies.iter().enumerate() {
+                    if galaxy_row > &id {
+                        expanded_galaxies[galaxy_id] = (expanded_galaxies[galaxy_id].0 + expansion_constant, expanded_galaxies[galaxy_id].1);
+                    }
+                }
+            }
         }
-    }
 
-    println!("Solution part 1: {sum_distance}");
+        for current_col in 0..universe[0].len() {
+            if (0..height).all(|row| universe[row].chars().nth(current_col).unwrap() == '.') {
+                for (galaxy_id, (_, galaxy_col)) in galaxies.iter().enumerate() {
+                    if galaxy_col > &current_col {
+                        expanded_galaxies[galaxy_id] = (expanded_galaxies[galaxy_id].0, expanded_galaxies[galaxy_id].1 + expansion_constant);
+                    }
+                }
+            }
+        }
+
+        let mut sum_distance = 0;
+        for start_galaxy_id in 0..expanded_galaxies.len() {
+            for dst_galaxy_id in (start_galaxy_id + 1)..expanded_galaxies.len() {
+                let (start_row, start_col) = expanded_galaxies[start_galaxy_id];
+                let (dst_row, dst_col) = expanded_galaxies[dst_galaxy_id];
+
+                sum_distance += i64::abs_diff(start_row as i64, dst_row as i64) + i64::abs_diff(start_col as i64, dst_col as i64);
+            }
+        }
+
+        println!("Solution part {}: {sum_distance}", part + 1);
+    }
 }

@@ -1,19 +1,19 @@
-fn analyze(pattern: &Vec<Vec<char>>) -> usize {
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Reflexion {
+    Vertical,
+    Horizontal
+}
 
-    // Check vertical split
-
-    // Array of number of left column for a possible split
-    let mut possible_vertical_split: Vec<usize> = (0..(pattern[0].len() - 1)).collect();
+fn check_for_vertical_split(pattern: &Vec<Vec<char>>, allowed_smudges: usize) -> Vec<usize> {
+    let mut required_smudges_per_split_position: Vec<usize> = vec![0; pattern[0].len() - 1];
 
     for line in pattern {
-        for split_position in possible_vertical_split.clone() {
+        for split_position in 0..required_smudges_per_split_position.len() {
             let (mut cur_left, mut cur_right) = (split_position, split_position + 1);
 
             while cur_right < line.len() {
                 if line[cur_left] != line[cur_right] {
-                    let position = possible_vertical_split.iter().position(|val| *val == split_position).unwrap();
-                    possible_vertical_split.remove(position);
-                    break;
+                    required_smudges_per_split_position[split_position] += 1;
                 }
 
                 if cur_left == 0 { break; }
@@ -23,30 +23,29 @@ fn analyze(pattern: &Vec<Vec<char>>) -> usize {
         }
     }
 
-    if !possible_vertical_split.is_empty() {
-        if possible_vertical_split.len() == 1 {
-            return possible_vertical_split[0] + 1;
-        } else {
-            panic!("Multiple vertical possibilies! {possible_vertical_split:?}");
+    let mut possible_solutions = Vec::new();
+
+    println!("{required_smudges_per_split_position:?}");
+    for (index, smudges) in required_smudges_per_split_position.iter().enumerate() {
+        if *smudges <= allowed_smudges {
+            possible_solutions.push(index);
         }
     }
 
+    possible_solutions
+}
 
-    // Check horizontal split
-
-    // Array of number of left column for a possible split
-    let mut possible_horizontal_split: Vec<usize> = (0..(pattern.len() - 1)).collect();
+fn check_for_horizontal_split(pattern: &Vec<Vec<char>>, allowed_smudges: usize) -> Vec<usize> {
+    let mut required_smudges_per_split_position: Vec<usize> = vec![0; pattern.len() - 1];
 
     for col_id in 0..pattern[0].len() {
-        for split_position in possible_horizontal_split.clone() {
+        for split_position in 0..required_smudges_per_split_position.len() {
 
             let (mut cur_left, mut cur_right) = (split_position, split_position + 1);
 
             while cur_right < pattern.len() {
                 if pattern[cur_left][col_id] != pattern[cur_right][col_id] {
-                    let position = possible_horizontal_split.iter().position(|val| *val == split_position).unwrap();
-                    possible_horizontal_split.remove(position);
-                    break;
+                    required_smudges_per_split_position[split_position] += 1;
                 }
 
                 if cur_left == 0 { break; }
@@ -56,19 +55,34 @@ fn analyze(pattern: &Vec<Vec<char>>) -> usize {
         }
     }
 
-    if !possible_horizontal_split.is_empty() {
-        if possible_horizontal_split.len() == 1 {
-            return 100 * (possible_horizontal_split[0] + 1);
-        } else {
-            panic!("Multiple horizontal possibilies! {possible_horizontal_split:?}");
+    let mut possible_solutions = Vec::new();
+
+    println!("{required_smudges_per_split_position:?}");
+    for (index, smudges) in required_smudges_per_split_position.iter().enumerate() {
+        if *smudges <= allowed_smudges {
+            possible_solutions.push(index);
         }
     }
+    possible_solutions
+}
 
-    panic!("No solution found!")
+fn find_reflexions(pattern: &Vec<Vec<char>>, allowed_smudges: usize) -> Vec<(Reflexion, usize)> {
+
+    let mut reflexions = Vec::new();
+
+    for reflexion in check_for_vertical_split(pattern, allowed_smudges) {
+        reflexions.push((Reflexion::Vertical, reflexion));
+    }
+    for reflexion in check_for_horizontal_split(pattern, allowed_smudges) {
+        reflexions.push((Reflexion::Horizontal, reflexion));
+    }
+
+    reflexions
 }
 
 fn main() {
-    let mut total: usize = 0;
+    let mut total_part_1: usize = 0;
+    let mut total_part_2: usize = 0;
     let mut pattern_id = 0;
 
     let mut pattern: Vec<Vec<char>> = Vec::new();
@@ -77,7 +91,30 @@ fn main() {
         if line.is_empty() {
             println!("Pattern {pattern_id}");
             pattern_id += 1;
-            total += analyze(&pattern);
+
+            let reflexions_without_smudge = find_reflexions(&pattern, 0);
+
+            if reflexions_without_smudge.len() != 1 {
+                panic!("Expected only 1 reflexion. Got {reflexions_without_smudge:?}");
+            }
+
+            total_part_1 += match reflexions_without_smudge[0] {
+                (Reflexion::Vertical, position) => position + 1,
+                (Reflexion::Horizontal, position) => (position + 1) * 100,
+            };
+
+            let mut reflexions_with_smudge = find_reflexions(&pattern, 1);
+            reflexions_with_smudge.retain(|reflexion| reflexion != &reflexions_without_smudge[0]);
+
+            if reflexions_with_smudge.len() != 1 {
+                panic!("Expected only 1 reflexion. Got {reflexions_without_smudge:?}");
+            }
+
+            total_part_2 += match reflexions_with_smudge[0] {
+                (Reflexion::Vertical, position) => position + 1,
+                (Reflexion::Horizontal, position) => (position + 1) * 100,
+            };
+
             pattern = Vec::new();
         } else {
             pattern.push(line.chars().collect())
@@ -85,7 +122,28 @@ fn main() {
     }
 
     println!("Pattern {pattern_id}");
-    total += analyze(&pattern);
+    let reflexions_without_smudge = find_reflexions(&pattern, 0);
 
-    println!("{total}")
+    if reflexions_without_smudge.len() != 1 {
+        panic!("Expected only 1 reflexion. Got {reflexions_without_smudge:?}");
+    }
+
+    total_part_1 += match reflexions_without_smudge[0] {
+        (Reflexion::Vertical, position) => (position + 1),
+        (Reflexion::Horizontal, position) => (position + 1) * 100,
+    };
+
+    let mut reflexions_with_smudge = find_reflexions(&pattern, 1);
+    reflexions_with_smudge.retain(|reflexion| reflexion != &reflexions_without_smudge[0]);
+
+    if reflexions_with_smudge.len() != 1 {
+        panic!("Expected only 1 reflexion. Got {reflexions_without_smudge:?}");
+    }
+
+    total_part_2 += match reflexions_with_smudge[0] {
+        (Reflexion::Vertical, position) => position + 1,
+        (Reflexion::Horizontal, position) => (position + 1) * 100,
+    };
+
+    println!("Part 1: {total_part_1}, part 2: {total_part_2}");
 }

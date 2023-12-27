@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Target {
     Accept,
     Reject,
@@ -20,7 +20,7 @@ impl FromStr for Target {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Condition {
     variable: char,
     operation: char,
@@ -60,7 +60,7 @@ impl FromStr for Condition {
 #[derive(Debug, PartialEq, Eq)]
 struct ParseRuleError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Rule {
     condition: Option<Condition>,
     target: Target
@@ -110,6 +110,13 @@ impl FromStr for Engine {
     }
 }
 
+#[derive(Debug, Clone)]
+struct EngineRange {
+    x: Vec<(usize, usize)>,
+    m: Vec<(usize, usize)>,
+    a: Vec<(usize, usize)>,
+    s: Vec<(usize, usize)>,
+}
 
 fn main() {
     let mut stdin_iter = std::io::stdin().lines();
@@ -143,12 +150,12 @@ fn main() {
     let mut part_1_result = 0;
 
     for engine in engines {
-        println!("Looking at engine {engine:?}");
+        // println!("Looking at engine {engine:?}");
         let mut workflow = "in".to_string();
 
         'outer: loop {
             for rule in workflows.get(&workflow).unwrap() {
-                println!("Looking a rule {rule:?}");
+                // println!("Looking a rule {rule:?}");
                 if rule.matches(&engine) {
                     match &rule.target {
                         Target::Accept => { part_1_result += engine.x + engine.m + engine.a + engine.s; break 'outer; },
@@ -161,4 +168,123 @@ fn main() {
     }
 
     println!("Part 1: {part_1_result}");
+
+    // --- Part 2
+
+    let engine = EngineRange { x: vec![(1, 4000)], m: vec![(1, 4000)], a: vec![(1, 4000)], s: vec![(1, 4000)] };
+
+    let part_2_result = count_accepted_engines(engine, workflows.get(&"in".to_string()).unwrap(), &workflows);
+
+    println!("Part 2: {part_2_result}");
+}
+
+fn count_possibilities(engine: &EngineRange) -> u64 {
+    let possibilities = engine.x.iter().map(|(min, max)| (max - min + 1) as u64).sum::<u64>() *
+    engine.m.iter().map(|(min, max)| (max - min + 1) as u64).sum::<u64>() *
+    engine.a.iter().map(|(min, max)| (max - min + 1) as u64).sum::<u64>() *
+    engine.s.iter().map(|(min, max)| (max - min + 1) as u64).sum::<u64>();
+
+    // println!("Possibilities for {engine:?}: {possibilities}");
+
+    possibilities
+}
+
+fn compute_gt_ranges(ranges: &Vec<(usize, usize)>, pivot: usize) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+    let mut upper: Vec<(usize, usize)> = Vec::new();
+    let mut lower: Vec<(usize, usize)> = Vec::new();
+
+    for range in ranges {
+        match range {
+            (min, max) if min > &pivot => { upper.push((*min, *max)); },
+            (min, max) if max <= &pivot => { lower.push((*min, *max)); },
+            (min, max) => { lower.push((*min, pivot)); upper.push((pivot + 1, *max)); },
+        }
+    }
+
+    (lower, upper)
+}
+
+fn compute_lt_ranges(ranges: &Vec<(usize, usize)>, pivot: usize) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+    let mut upper: Vec<(usize, usize)> = Vec::new();
+    let mut lower: Vec<(usize, usize)> = Vec::new();
+
+    for range in ranges {
+        match range {
+            (min, max) if min >= &pivot => { upper.push((*min, *max)); },
+            (min, max) if max < &pivot => { lower.push((*min, *max)); },
+            (min, max) => { lower.push((*min, pivot - 1)); upper.push((pivot, *max)); },
+        }
+    }
+
+    (lower, upper)
+}
+
+fn count_accepted_engines(engine: EngineRange, rules: &Vec<Rule>, workflows: &HashMap<String, Vec<Rule>>) -> u64 {
+    // println!("Counting {engine:?}, {rules:?}");
+    let rule = &rules[0];
+    if let Some(condition) = &rule.condition {
+        let mut matched_engine = engine.clone();
+        let mut remaining_engine = engine.clone();
+
+        let mut result = 0;
+
+        match condition {
+            Condition { variable: 'x', operation: '>', amount } => {
+                let (lower_ranges, upper_ranges) = compute_gt_ranges(&engine.x, *amount);
+                matched_engine.x = upper_ranges;
+                remaining_engine.x = lower_ranges;
+            },
+            Condition { variable: 'x', operation: '<', amount } => {
+                let (lower_ranges, upper_ranges) = compute_lt_ranges(&engine.x, *amount);
+                matched_engine.x = lower_ranges;
+                remaining_engine.x = upper_ranges;
+            },
+            Condition { variable: 'm', operation: '>', amount } => {
+                let (lower_ranges, upper_ranges) = compute_gt_ranges(&engine.m, *amount);
+                matched_engine.m = upper_ranges;
+                remaining_engine.m = lower_ranges;
+            },
+            Condition { variable: 'm', operation: '<', amount } => {
+                let (lower_ranges, upper_ranges) = compute_lt_ranges(&engine.m, *amount);
+                matched_engine.m = lower_ranges;
+                remaining_engine.m = upper_ranges;
+            },
+            Condition { variable: 'a', operation: '>', amount } => {
+                let (lower_ranges, upper_ranges) = compute_gt_ranges(&engine.a, *amount);
+                matched_engine.a = upper_ranges;
+                remaining_engine.a = lower_ranges;
+            },
+            Condition { variable: 'a', operation: '<', amount } => {
+                let (lower_ranges, upper_ranges) = compute_lt_ranges(&engine.a, *amount);
+                matched_engine.a = lower_ranges;
+                remaining_engine.a = upper_ranges;
+            },
+            Condition { variable: 's', operation: '>', amount } => {
+                let (lower_ranges, upper_ranges) = compute_gt_ranges(&engine.s, *amount);
+                matched_engine.s = upper_ranges;
+                remaining_engine.s = lower_ranges;
+            },
+            Condition { variable: 's', operation: '<', amount } => {
+                let (lower_ranges, upper_ranges) = compute_lt_ranges(&engine.s, *amount);
+                matched_engine.s = lower_ranges;
+                remaining_engine.s = upper_ranges;
+            },
+            _ => panic!("Failure to apply condition {condition:?} to engine {engine:?}")
+        }
+
+        result += match &rule.target {
+            Target::Accept => count_possibilities(&matched_engine),
+            Target::Reject => 0,
+            Target::Workflow(name) => count_accepted_engines(matched_engine, &workflows.get(name).unwrap(), workflows)
+        };
+        result += count_accepted_engines(remaining_engine, &rules[1..].to_vec(), workflows);
+
+        return result;
+    } else {
+        match &rule.target {
+            Target::Accept => count_possibilities(&engine),
+            Target::Reject => 0,
+            Target::Workflow(name) => count_accepted_engines(engine, &workflows.get(name).unwrap(), workflows)
+        }
+    }
 }

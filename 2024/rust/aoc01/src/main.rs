@@ -23,7 +23,7 @@ fn main() {
     left_col.sort();
     right_col.sort();
 
-    let result1: i32 = zip(left_col.iter(), right_col.iter()).map(|(&l, &r)| (r - l).abs()).sum();
+    let result1: i32 = zip(left_col.iter(), right_col.iter()).map(|(l, r)| (r - l).abs()).sum();
 
     println!("Part One: {}", result1);
 

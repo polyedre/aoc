@@ -1,6 +1,5 @@
-workspace = { members = ["aoc02"] }
 [package]
-name = "aoc01"
+name = "aoc02"
 version = "0.1.0"
 edition = "2021"
 

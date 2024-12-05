@@ -1,13 +1,8 @@
-(use-modules ((gnu packages terminals)
-              #:select (alacritty))
-             ((gnu packages commencement)
-              #:select (gcc-toolchain))
-             ((gnu packages rust)
-              #:select (rust-analyzer))
-             ((gnu packages crates-io)
-              #:select (rust-clippy-0.0))
-             ((gnu packages rust-apps)
-              #:select (rust-cargo)))
+(use-modules (gnu packages terminals)
+             (gnu packages commencement)
+             (gnu packages rust)
+             (gnu packages crates-io)
+             (gnu packages rust-apps))
 
 (concatenate-manifests
  (list (package->development-manifest alacritty)

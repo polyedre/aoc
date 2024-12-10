@@ -1,8 +1,6 @@
 use core::fmt;
-use core::matches;
 use core::result::Result;
 use core::result::Result::Err;
-use std::collections::HashMap;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::fs::File;
@@ -114,7 +112,11 @@ fn sort(update: &mut Vec<i32>, rules: &Vec<(i32, i32)>) -> () {
 // Optimized
 
 fn optimized_implementation(filename: &str) -> (u32, u32) {
-    let mut adjacents: HashMap<u8, Vec<u8>> = HashMap::new();
+    let mut adjacents: [Vec<u8>; 255] = std::iter::repeat_with(|| Vec::new())
+        .take(255)
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
     let mut sequences: Vec<Vec<u8>> = Vec::new();
 
     let f = File::open(filename).expect("failed to open file");
@@ -123,7 +125,7 @@ fn optimized_implementation(filename: &str) -> (u32, u32) {
         let line: String = String::from(line.unwrap());
 
         if let Some((left, right)) = line.split_once('|') {
-            adjacents.entry(left.parse().unwrap()).or_default().push(right.parse().unwrap());
+            adjacents[left.parse::<usize>().unwrap() as usize].push(right.parse().unwrap());
         }
 
         match line.split(',').collect::<Vec<&str>>() {
@@ -155,38 +157,33 @@ fn get_middle<T>(update: &Vec<T>) -> T where T: Copy {
     return update[update.len() / 2]
 }
 
-fn is_topologically_sorted(page_sequence: &Vec<u8>, adjacents: &HashMap<u8, Vec<u8>>) -> bool {
-    let mut indegree: HashMap<u8, u8> = HashMap::new();
+fn is_topologically_sorted(page_sequence: &Vec<u8>, adjacents: &[Vec<u8>; 255]) -> bool {
+    let mut indegree: [u8; 255] = [0; 255];
 
     compute_indegree(page_sequence, adjacents, &mut indegree);
 
     for page in page_sequence {
-        match indegree.get(page) {
-            Some(0) | None => {
-                if let Some(adjs) = adjacents.get(page) {
-                    for adj in adjs {
-                        indegree.entry(*adj).and_modify(|degree| *degree -= 1).or_insert(0);
-                    }
-                }
-            },
-            Some(_) => return false,
+        if indegree[*page as usize] == 0 {
+            for &adj in &adjacents[*page as usize] {
+                indegree[adj as usize] -= 1;
+            }
+        } else {
+            return false;
         }
     }
     true
 }
 
-fn compute_indegree(page_sequence: &Vec<u8>, adjacents: &HashMap<u8, Vec<u8>>, indegree: &mut HashMap<u8, u8>) {
+fn compute_indegree(page_sequence: &Vec<u8>, adjacents: &[Vec<u8>; 255], indegree: &mut [u8; 255]) {
     for page in page_sequence {
-        if let Some(adjs) = adjacents.get(page) {
-            for adj in adjs {
-                indegree.entry(*adj).and_modify(|degree| *degree += 1).or_insert(1);
-            }
+        for &adj in &adjacents[*page as usize] {
+            indegree[adj as usize] += 1;
         }
     }
 }
 
-fn sort_topologically(page_sequence: &mut Vec<u8>, adjacents: &HashMap<u8, Vec<u8>>) -> Result<Box<Vec<u8>>, UnsortableError> {
-    let mut indegree: HashMap<u8, u8> = HashMap::new();
+fn sort_topologically(page_sequence: &mut Vec<u8>, adjacents: &[Vec<u8>; 255]) -> Result<Box<Vec<u8>>, UnsortableError> {
+    let mut indegree: [u8; 255] = [0; 255];
     let queue = page_sequence;
     let mut sorted_sequence: Box<Vec<u8>> = Box::new(Vec::new());
 
@@ -194,11 +191,9 @@ fn sort_topologically(page_sequence: &mut Vec<u8>, adjacents: &HashMap<u8, Vec<u
 
     'outer: while !queue.is_empty() {
         for (index, page) in queue.iter().enumerate() {
-            if matches!(indegree.get(&page), Some(0) | None) {
-                if let Some(adjs) = adjacents.get(&page) {
-                    for adj in adjs {
-                        indegree.entry(*adj).and_modify(|degree| *degree -= 1).or_insert(0);
-                    }
+            if indegree[*page as usize] == 0 {
+                for &adj in &adjacents[*page as usize] {
+                    indegree[adj as usize] -= 1;
                 }
 
                 sorted_sequence.push(queue.remove(index));

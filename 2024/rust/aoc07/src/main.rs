@@ -6,6 +6,7 @@ fn is_possible(equation: &[u64], sum: u64, operations: &[fn(u64, u64) -> u64]) -
     match equation {
         [] => sum == 0,
         [elem] => *elem == sum,
+        [first, ..] if *first > sum => false,
         [first, second, remainder @ ..] => {
             operations.iter().any(|op| {
                 let next = op(*first, *second);
@@ -40,9 +41,13 @@ fn main() {
     let add = |a: u64, b: u64| a + b;
     let multiply = |a: u64, b: u64| a * b;
     let concat: fn(u64, u64) -> u64 = |a, b| {
-        (a.to_string() + &b.to_string())
-            .parse()
-            .expect("Concatenation failed: invalid number format")
+        let mut offset = 1;
+
+        while offset <= b {
+            offset *= 10;
+        }
+
+        a * offset + b
     };
 
     let operations: &[fn(u64, u64) -> u64] = &[add, multiply, concat];

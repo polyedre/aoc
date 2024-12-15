@@ -54,13 +54,11 @@ fn main() {
 
     let now = Instant::now();
     let part1: u64 = input.iter()
-        .filter(|(sum, eq)| is_possible(&eq, *sum, &operations[..2]))
-        .map(|(sum, _)| *sum)
+        .filter_map(|(sum, eq)| is_possible(&eq, *sum, &operations[..2]).then_some(sum))
         .sum();
 
     let part2: u64 = input.iter()
-        .filter(|(sum, eq)| is_possible(&eq, *sum, operations))
-        .map(|(sum, _)| *sum)
+        .filter_map(|(sum, eq)| is_possible(&eq, *sum, operations).then_some(sum))
         .sum();
     let elapsed = now.elapsed();
 
